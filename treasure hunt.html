@@ -1,0 +1,314 @@
+
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Treasure Hunt - Sejarah Tingkatan 3</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#172b24;color:#fff3d6;
+ font-family:Georgia,serif;text-align:center
+}
+#app{max-width:800px;margin:auto;padding:16px}
+h1,h2{color:#ffd166}
+.panel{
+ background:#294438;border:2px solid #b99b50;
+ border-radius:16px;padding:20px;margin:15px 0
+}
+button{
+ background:#76502e;color:white;border:2px solid #ffd166;
+ border-radius:10px;padding:12px;margin:5px;
+ cursor:pointer;font-size:15px
+}
+button:hover{background:#a16b32}
+input{padding:12px;border-radius:8px;max-width:90%}
+.hidden{display:none!important}
+.world{
+ height:240px;position:relative;overflow:hidden;
+ border:3px solid #ffd166;border-radius:15px;
+ background:linear-gradient(#79b9c7 0 60%,#658d43 60% 68%,#65432d 68%)
+}
+.sun{position:absolute;right:12%;top:20px;font-size:45px}
+.mountains{position:absolute;bottom:60px;font-size:45px;width:100%}
+.trees{position:absolute;bottom:40px;width:100%;font-size:32px}
+.hero{
+ position:absolute;bottom:37px;left:15%;font-size:45px;
+ transition:left .5s,bottom .25s
+}
+.hero.jump{bottom:100px}
+.ruins{position:absolute;right:12%;bottom:35px;font-size:55px}
+.caption{
+ position:absolute;top:8px;width:100%;font-weight:bold;
+ text-shadow:1px 2px 3px black
+}
+.hud{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.hud span{background:#294438;padding:8px;border-radius:8px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.answers button{min-height:55px}
+#feedback{line-height:1.6}
+table{width:100%;border-collapse:collapse}
+td,th{padding:8px;border-bottom:1px solid #64745a}
+.small{font-size:12px;color:#d8d6b8}
+@media(max-width:500px){
+ .answers{grid-template-columns:1fr}
+ .panel{padding:12px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<h1>🏆 TREASURE HUNT 🏆</h1>
+<h3>Legenda Pejuang Tempatan</h3>
+<p>Zaman kerajaan Melayu purba</p>
+
+<section id="menu" class="panel">
+ <div style="font-size:60px">🏯 🌴 🗺️ 💎</div>
+ <h2>Misteri Harta Mahkota</h2>
+ <p>
+ Sebuah peta rahsia membawa kamu merentasi hutan misteri,
+ kampung lama dan kota purba. Jawab 10 soalan Sejarah,
+ kumpulkan syiling dan temui harta karun!
+ </p>
+ <input id="playerName" maxlength="20"
+ placeholder="Masukkan nama pengembara">
+ <p><button onclick="startGame()">⚔ MULA PENGEMBARAAN</button></p>
+ <button onclick="showRanking()">🏆 LIHAT RANKING</button>
+</section>
+
+<section id="game" class="hidden">
+ <div class="world">
+  <div class="sun">☀️</div>
+  <div class="mountains">⛰️　🌄　⛰️</div>
+  <div class="trees">🌴　🌳　🌴　🌳</div>
+  <div class="ruins" id="ruins">🏯</div>
+  <div class="hero" id="hero">🧙</div>
+  <div class="caption" id="caption">Hutan Larangan</div>
+ </div>
+
+ <div class="hud">
+  <span>⭐ Markah: <b id="score">0</b></span>
+  <span>💰 Syiling: <b id="coins">0</b></span>
+  <span>❤️ Nyawa: <b id="lives">3</b></span>
+  <span>🗺️ Checkpoint: <b id="level">0/10</b></span>
+ </div>
+
+ <section id="storyPanel" class="panel">
+  <h2 id="storyTitle"></h2>
+  <p id="storyText"></p>
+  <button onclick="goQuestion()">TERUSKAN ➜</button>
+ </section>
+
+ <section id="quizPanel" class="panel hidden">
+  <h2>📜 CABARAN SEJARAH</h2>
+  <p id="questionNumber"></p>
+  <h3 id="questionText"></h3>
+  <div id="answers" class="answers"></div>
+  <p id="feedback" aria-live="polite"></p>
+  <button id="next" class="hidden" onclick="nextQuestion()">
+   CHECKPOINT SETERUSNYA ➜
+  </button>
+ </section>
+</section>
+
+<section id="result" class="panel hidden">
+ <div style="font-size:60px">👑💎🏆</div>
+ <h2 id="resultTitle"></h2>
+ <p id="resultText"></p>
+ <h2>Markah: <span id="finalScore"></span></h2>
+ <p id="finalCoins"></p>
+ <button onclick="restartGame()">MAIN LAGI</button>
+ <button onclick="showRanking()">LIHAT RANKING</button>
+ <button onclick="home()">MENU UTAMA</button>
+</section>
+
+<section id="ranking" class="panel hidden">
+ <h2>🏆 RANKING PEMBURU HARTA</h2>
+ <div id="rankingList"></div>
+ <button onclick="home()">KEMBALI KE MENU</button>
+</section>
+<p class="small">Game pendidikan Sejarah Tingkatan 3</p>
+</div>
+
+<script>
+const Q=[
+["Siapakah pemimpin penentangan di Naning?",
+["Dol Said","Rentap","Tok Janggut","Mat Salleh"],0,
+"Dol Said menentang British di Naning."],
+["Rentap menentang keluarga Brooke di mana?",
+["Perak","Sarawak","Pahang","Kelantan"],1,
+"Rentap menentang James Brooke di Sarawak."],
+["Dato' Maharaja Lela terlibat dalam penentangan di negeri mana?",
+["Johor","Perlis","Perak","Melaka"],2,
+"Beliau terlibat dalam penentangan terhadap British di Perak."],
+["Siapakah Residen British yang dibunuh di Perak?",
+["J.W.W. Birch","Hugh Low","Frank Swettenham","J.P. Rodger"],0,
+"J.W.W. Birch dibunuh di Pasir Salak pada tahun 1875."],
+["Yamtuan Antah mempertahankan kawasan mana?",
+["Seri Menanti","Kedah","Terengganu","Sarawak"],0,
+"Yamtuan Antah mempertahankan kedaulatan Seri Menanti."],
+["Siapakah tokoh penentangan terkenal di Pahang?",
+["Dol Said","Dato' Bahaman","Rentap","Tok Janggut"],1,
+"Dato' Bahaman merupakan pemimpin penentangan di Pahang."],
+["Tok Janggut menentang British di negeri mana?",
+["Kelantan","Perak","Pahang","Johor"],0,
+"Penentangan Tok Janggut berlaku di Kelantan."],
+["Apakah nama sebenar Tok Janggut?",
+["Mat Salleh","Haji Hassan bin Munas",
+"Abdul Rahman Limbong","Yamtuan Antah"],1,
+"Tok Janggut dikenali sebagai Haji Hassan bin Munas."],
+["Haji Abdul Rahman Limbong menentang British di mana?",
+["Terengganu","Melaka","Perak","Negeri Sembilan"],0,
+"Beliau menentang peraturan British di Terengganu."],
+["Apakah antara sebab penentangan pejuang tempatan?",
+["Menguasai Eropah","Menentang campur tangan asing",
+"Mencari Amerika","Membina empayar di Eropah"],1,
+"Pejuang tempatan mempertahankan kuasa dan kepentingan tempatan."]
+];
+
+const S=[
+["Gerbang Kerajaan Purba","Kamu menemukan peta rahsia yang menunjukkan lokasi Harta Mahkota."],
+["Hutan Larangan","Pokok tua menyembunyikan laluan ke kota purba. Penjaga hutan menunggu."],
+["Jambatan Usang","Jambatan kayu merentasi sungai. Buktikan ilmu untuk meneruskan perjalanan."],
+["Perkampungan Lama","Penduduk berkongsi kisah perjuangan tokoh yang mempertahankan tanah air."],
+["Kubu Batu","Sebuah kubu lama menyimpan petunjuk ke laluan rahsia."],
+["Pintu Gerbang","Pintu batu hanya terbuka kepada pengembara yang bijaksana."],
+["Manuskrip Rahsia","Kamu menemukan catatan perjuangan tokoh tempatan."],
+["Gua Misteri","Kristal bercahaya menerangi peti harta yang terkunci."],
+["Kuil Purba","Kuil purba menyimpan petunjuk terakhir."],
+["Bilik Harta Karun","Cabaran terakhir menentukan sama ada kamu layak menemui harta."]
+];
+
+const $=id=>document.getElementById(id);
+let name="Pengembara",score=0,coins=0,lives=3,level=0,answered=false;
+
+function show(id){
+ ["menu","game","result","ranking"].forEach(x=>$(x).classList.add("hidden"));
+ $(id).classList.remove("hidden");
+}
+function startGame(){
+ name=$("playerName").value.trim()||"Pengembara";
+ score=0;coins=0;lives=3;level=0;
+ show("game");story();
+}
+function hud(){
+ $("score").textContent=score;
+ $("coins").textContent=coins;
+ $("lives").textContent="❤️".repeat(lives)||"0";
+ $("level").textContent=level+"/10";
+}
+function story(){
+ $("storyPanel").classList.remove("hidden");
+ $("quizPanel").classList.add("hidden");
+ $("storyTitle").textContent="📍 "+S[level][0];
+ $("caption").textContent=S[level][0];
+ $("storyText").textContent=S[level][1];
+ $("ruins").textContent=["🏯","🌴","🌉","🏡","🏰","🚪","📜","💎","🛕","👑"][level];
+ $("hero").style.left="15%";
+ $("hero").classList.remove("jump");
+ hud();
+}
+function goQuestion(){
+ $("hero").style.left="70%";
+ $("hero").classList.add("jump");
+ $("storyPanel").classList.add("hidden");
+ $("quizPanel").classList.remove("hidden");
+ answered=false;
+ $("questionNumber").textContent="Checkpoint "+(level+1)+" daripada 10";
+ $("questionText").textContent=Q[level][0];
+ $("feedback").textContent="";
+ $("next").classList.add("hidden");
+ $("answers").innerHTML="";
+ Q[level][1].forEach((answer,i)=>{
+  let b=document.createElement("button");
+  b.textContent=(i+1)+". "+answer;
+  b.onclick=()=>answerQuestion(i);
+  $("answers").appendChild(b);
+ });
+}
+function answerQuestion(i){
+ if(answered)return;
+ answered=true;
+ let q=Q[level];
+ $("answers").querySelectorAll("button").forEach(b=>b.disabled=true);
+ if(i===q[2]){
+  score+=100;coins++;
+  $("feedback").textContent="✅ BETUL! +100 MARKAH. "+q[3];
+  $("feedback").style.color="#a7f3a0";
+ }else{
+  lives--;
+  $("feedback").textContent="❌ Jawapan: "+q[1][q[2]]+". "+q[3];
+  $("feedback").style.color="#ffb2a5";
+ }
+ hud();
+ $("next").classList.remove("hidden");
+ $("next").textContent=lives<=0?"LIHAT KEPUTUSAN":
+  level===9?"TAMATKAN PENGEMBARAAN":"CHECKPOINT SETERUSNYA ➜";
+}
+function nextQuestion(){
+ if(lives<=0){finish(false);return}
+ if(level===9){finish(true);return}
+ level++;story();
+}
+function rankings(){
+ try{
+  let r=JSON.parse(localStorage.getItem("treasureRanking")||"[]");
+  return Array.isArray(r)?r:[];
+ }catch(e){return []}
+}
+function save(){
+ let r=rankings();
+ r.push({name,score});
+ r.sort((a,b)=>b.score-a.score);
+ try{localStorage.setItem("treasureRanking",JSON.stringify(r.slice(0,20))}
+ catch(e){}
+}
+function finish(won){
+ save();show("result");
+ $("resultTitle").textContent=won?"TAHNIAH, "+name.toUpperCase()+"!":"PENGEMBARAAN TAMAT";
+ $("resultText").textContent=won?
+ "Kamu berjaya menamatkan 10 checkpoint dan menemui Harta Mahkota!":
+ "Nyawa kamu telah habis. Cuba lagi untuk menguasai ilmu sejarah.";
+ $("finalScore").textContent=score;
+ $("finalCoins").textContent="Syiling dikumpul: "+coins;
+}
+function restartGame(){$("playerName").value=name;startGame()}
+function showRanking(){
+ show("ranking");
+ let r=rankings(),box=$("rankingList");
+ box.innerHTML="";
+ if(!r.length){box.textContent="Belum ada rekod.";return}
+ let table=document.createElement("table");
+ let head=document.createElement("tr");
+ ["Kedudukan","Pemain","Markah"].forEach(t=>{
+  let th=document.createElement("th");th.textContent=t;head.appendChild(th)
+ });
+ table.appendChild(head);
+ r.slice(0,10).forEach((p,i)=>{
+  let tr=document.createElement("tr");
+  [i+1,p.name,p.score].forEach(v=>{
+   let td=document.createElement("td");td.textContent=v;tr.appendChild(td)
+  });
+  table.appendChild(tr);
+ });
+ box.appendChild(table);
+}
+function home(){show("menu")}
+document.addEventListener("keydown",e=>{
+ if($("game").classList.contains("hidden"))return;
+ if(e.code==="Space"){
+  $("hero").classList.add("jump");
+  setTimeout(()=>$("hero").classList.remove("jump"),450);
+ }
+ if(!$("quizPanel").classList.contains("hidden")&&!answered){
+  let n=Number(e.key);
+  if(n>=1&&n<=4){
+   let b=$("answers").querySelectorAll("button")[n-1];
+   if(b&&!b.disabled)b.click();
+  }
+ }
+});
+</script>
+</body>
+</html>
